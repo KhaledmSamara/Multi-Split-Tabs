@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Search</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: transparent;
+    color: #e6e6e6;
+    user-select: none;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  
+  /* Full window click capture - transparent overlay covering entire window */
+  .full-window-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.01);
+    display: none;
+    pointer-events: auto;
+    z-index: 999;
+  }
+  
+  .full-window-overlay.active {
+    display: block;
+  }
+  
+  /* Search box container - positioned absolutely within tab bounds */
+  .search-container {
+    position: fixed;
+    display: none;
+    pointer-events: none;
+    z-index: 1001;
+  }
+  
+  .search-container.active {
+    display: block;
+  }
+  
+  /* Search input box */
+  .search-box {
+    width: 500px;
+    max-width: 90%;
+    min-width: 300px;
+    background: #000;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    margin: 20px auto;
+    pointer-events: auto;
+    position: relative;
+    z-index: 10;
+  }
+  
+  /* Per-tab darkness overlay inside the container (covers only tab bounds) */
+  .tab-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 0;
+    pointer-events: none;
+  }
+  
+  .nav-button {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .nav-button:hover {
+    background: #1a1a1a;
+    color: #fff;
+  }
+  
+  .nav-button:active {
+    transform: scale(0.95);
+  }
+  
+  .nav-button svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .search-icon {
+    display: flex;
+    align-items: center;
+    color: #999;
+  }
+  
+  .search-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  #searchInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e6e6e6;
+    font-size: 14px;
+    font-family: inherit;
+    pointer-events: auto;
+  }
+  
+  #searchInput::placeholder {
+    color: #666;
+  }
+  
+  .search-button {
+    background: #000;
+    border: 1px solid #333;
+    color: #999;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .search-button:hover {
+    background: #1a1a1a;
+    color: #fff;
+    border-color: #444;
+  }
+  
+  .search-button:active {
+    transform: scale(0.95);
+  }
+</style>
+</head>
+<body>
+
+<!-- Full window click capture overlay -->
+<div class="full-window-overlay" id="fullWindowOverlay" onclick="closeSearch()"></div>
+
+<!-- Search box -->
+<div class="search-container" id="searchContainer" onclick="handleContainerClick(event)">
+  <div class="tab-dim"></div>
+  <div class="search-box" onclick="event.stopPropagation()">
+    <button class="nav-button" onclick="navigateBack()" title="Back">
+      <svg fill="currentColor" viewBox="0 0 16 16">
+        <path d="M11 1L5 8l6 7V1z"/>
+      </svg>
+    </button>
+    <button class="nav-button" onclick="navigateForward()" title="Forward">
+      <svg fill="currentColor" viewBox="0 0 16 16">
+        <path d="M5 1l6 7-6 7V1z"/>
+      </svg>
+    </button>
+    <span class="search-icon">
+      <svg fill="currentColor" viewBox="0 0 16 16">
+        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+      </svg>
+    </span>
+    <input 
+      type="text" 
+      id="searchInput" 
+      placeholder="Search or enter URL..."
+      autofocus
+    >
+    <button class="search-button" onclick="performSearch()">Go</button>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer } = require("electron");
+
+let isActive = false;
+
+function handleContainerClick(event) {
+  // Close search if clicking on the container itself, not on its children
+  if (event.target.id === 'searchContainer') {
+    closeSearch(event.clientX, event.clientY);
+  }
+}
+
+function closeSearch(clickX, clickY) {
+  isActive = false;
+  document.getElementById("fullWindowOverlay").classList.remove("active");
+  document.getElementById("searchContainer").classList.remove("active");
+  document.getElementById("searchInput").value = "";
+  ipcRenderer.send("close-search", { clickX, clickY });
+}
+
+function performSearch() {
+  const query = document.getElementById("searchInput").value.trim();
+  if (!query) return;
+  
+  ipcRenderer.send("perform-search", query);
+  closeSearch();
+}
+
+function navigateBack() {
+  ipcRenderer.send("navigate-back");
+}
+
+function navigateForward() {
+  ipcRenderer.send("navigate-forward");
+}
+
+  // Listen for search activation with tab bounds
+ipcRenderer.on("activate-search", (event, bounds, currentUrl) => {
+  isActive = true;
+  
+  const fullOverlay = document.getElementById("fullWindowOverlay");
+  const container = document.getElementById("searchContainer");
+  const box = container.querySelector(".search-box");
+  const input = document.getElementById("searchInput");
+  const goBtn = container.querySelector(".search-button");
+    
+    // Show full window overlay (transparent, captures all clicks)
+    fullOverlay.classList.add("active");
+    fullOverlay.onclick = (e) => closeSearch(e.clientX, e.clientY);
+    
+    // Container spans the overlay window (which is already sized to the tab bounds)
+    container.style.left = "0px";
+    container.style.top = "0px";
+    container.style.width = bounds.width + "px";
+    container.style.height = bounds.height + "px";
+  container.classList.add("active");
+  
+  // Responsive sizing based on tab bounds
+    const availW = Math.max(220, bounds.width - 20);
+    const boxW = Math.min(500, availW);
+    const scale = boxW / 500;
+    const marginTop = Math.max(8, Math.min(20, Math.floor(bounds.height * 0.1)));
+    const padV = Math.max(6, Math.floor(10 * scale));
+    const padH = Math.max(10, Math.floor(15 * scale));
+    box.style.width = boxW + "px";
+    box.style.margin = marginTop + "px auto";
+    box.style.padding = padV + "px " + padH + "px";
+    input.style.fontSize = Math.max(11, Math.floor(14 * scale)) + "px";
+    goBtn.style.fontSize = Math.max(11, Math.floor(13 * scale)) + "px";
+    goBtn.style.padding = Math.max(5, Math.floor(6 * scale)) + "px " + Math.max(14, Math.floor(16 * scale)) + "px";
+    container.querySelectorAll(".nav-button svg").forEach(svg => {
+      svg.style.width = Math.max(12, Math.floor(16 * scale)) + "px";
+      svg.style.height = Math.max(12, Math.floor(16 * scale)) + "px";
+    });
+  container.querySelectorAll(".search-icon svg").forEach(svg => {
+    svg.style.width = Math.max(12, Math.floor(18 * scale)) + "px";
+    svg.style.height = Math.max(12, Math.floor(18 * scale)) + "px";
+  });
+  
+  // Focus the input
+  try {
+    if (currentUrl && typeof currentUrl === "string" && !currentUrl.startsWith("file://")) {
+      input.value = currentUrl;
+      try { input.setSelectionRange(0, currentUrl.length); } catch (e) {}
+    }
+    input.focus();
+  } catch (e) {}
+  setTimeout(() => { try { input.focus(); } catch (e) {} }, 100);
+});
+
+// Handle Enter key
+document.getElementById("searchInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    performSearch();
+  } else if (e.key === "Escape") {
+    closeSearch();
+  }
+});
+</script>
+</body>
+</html>

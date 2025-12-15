@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Header</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #1a1a1a; color: #e6e6e6; user-select: none; overflow: hidden;
+  }
+  .header {
+    position: relative; height: 80px; display: flex; flex-direction: column;
+    border-bottom: 1px solid #2a2a2a; -webkit-app-region: drag;
+  }
+  .line1 {
+    height: 40px; display: flex; justify-content: space-between; align-items: center;
+    padding: 0 10px; background: #1a1a1a; position: relative; overflow: visible;
+  }
+  .left-controls, .right-controls { display: flex; gap: 8px; align-items: center; }
+  button {
+    background: #2a2a2a; border: 1px solid #3a3a3a; color: #e6e6e6;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    transition: all 0.2s; display: flex; align-items: center; gap: 4px;
+    position: relative; -webkit-app-region: no-drag;
+  }
+  button:hover:not(:disabled) { background: #3a3a3a; }
+  button:active:not(:disabled) { transform: scale(0.95); }
+  button:disabled { opacity: 0.3; cursor: not-allowed; }
+  button:disabled .tooltip-trigger::after { content: attr(data-disabled-tooltip) !important; }
+  .window-btn { width: 32px; height: 32px; padding: 0; justify-content: center; }
+  .close-btn:hover { background-color: #8b0000 !important; border-color: #660000 !important; color: #fff; }
+  .zoom-display {
+    background: #2a2a2a; border: 1px solid #3a3a3a; padding: 6px 10px;
+    border-radius: 6px; font-size: 13px; min-width: 50px; text-align: center;
+    -webkit-app-region: no-drag;
+  }
+  .tooltip:hover::after,
+  .tooltip:disabled:hover::after {
+    content: attr(data-tooltip); position: absolute; top: 100%; left: 50%;
+    transform: translateX(-50%); background: #0a0a0a; color: #fff;
+    padding: 4px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap;
+    z-index: 9999; border: 1px solid #2a2a2a; margin-top: 4px; pointer-events: none;
+  }
+  .tooltip:disabled:hover::after {
+    content: attr(data-disabled-tooltip);
+  }
+  .tooltip-top:hover::after,
+  .tooltip-top:disabled:hover::after {
+    bottom: auto; top: 0; margin: 0;
+    transform: translate(-50%, calc(-100% - 6px));
+  }
+  .line2 {
+    height: 40px; display: flex; align-items: center; padding: 0 10px;
+    background: #151515; gap: 8px; position: relative; overflow: visible;
+  }
+  .tabs-container {
+    display: flex; gap: 8px; overflow-x: auto; overflow-y: visible;
+    width: 100%; -webkit-app-region: no-drag;
+  }
+  .tabs-container::-webkit-scrollbar { height: 4px; }
+  .tabs-container::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 2px; }
+  .page-tab {
+    display: flex; align-items: center; gap: 4px; padding: 6px 12px;
+    background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 6px;
+    cursor: pointer; font-size: 13px; line-height: 1; white-space: nowrap;
+    transition: all 0.2s; flex-shrink: 0; -webkit-app-region: no-drag;
+  }
+  .page-tab:hover { background: #3a3a3a; }
+  .page-tab.active { background: #0a0a0a; border-color: #3a3a3a; }
+  .page-close {
+    background: transparent; border: none; color: #999; padding: 0px 4px;
+    font-size: 13px; cursor: pointer; border-radius: 3px; -webkit-app-region: no-drag;
+  }
+  .page-close:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  svg { pointer-events: none; }
+  button svg { display: block; }
+  .left-controls button span { line-height: 1; }
+  .left-controls button svg { flex-shrink: 0; }
+  .left-controls button { color: #fff; }
+  .page-add {
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px 8px;
+    background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 6px;
+    cursor: pointer; flex-shrink: 0; -webkit-app-region: no-drag;
+    font-size: 13px; line-height: 1;
+  }
+  .page-add:hover { background: #3a3a3a; }
+  .page-add svg { width: 16px; height: 16px; color: #fff; }
+  .page-add:hover svg { color: #fff; }
+  .drop-indicator {
+    position: absolute; top: 6px; bottom: 6px; width: 2px; background: #ffffff; border-radius: 1px; pointer-events: none;
+  }
+  .drag-horizontal * { cursor: ew-resize !important; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="line1">
+    <div class="left-controls">
+      <button class="tooltip" onclick="newWindow()" data-tooltip="New Window (Ctrl+N)">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor">
+          <g stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+            <line x1="4" y1="9" x2="20" y2="9"></line>
+          </g>
+        </svg>
+        <span>New Window</span>
+      </button>
+      <button class="tooltip" onclick="addTab()" data-tooltip="Add Tab (Ctrl+T)">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor">
+          <g stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </g>
+        </svg>
+        <span>Add Tab</span>
+      </button>
+      <button class="tooltip" onclick="deleteTab()" data-tooltip="Delete Tab (Ctrl+W)">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor">
+          <g stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </g>
+        </svg>
+        <span>Delete Tab</span>
+      </button>
+      <button class="window-btn tooltip" onclick="navigateBack()" data-tooltip="Back (Alt+Left)" data-disabled-tooltip="Select a tab first" id="backBtn">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor">
+          <polyline points="15 6 9 12 15 18" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+      </button>
+      <button class="window-btn tooltip" onclick="openSearch()" data-tooltip="Search (Ctrl+F)" data-disabled-tooltip="Select a tab first" id="searchBtn">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor">
+          <g stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="6"></circle>
+            <line x1="16.5" y1="16.5" x2="20" y2="20"></line>
+          </g>
+        </svg>
+      </button>
+      <button class="window-btn tooltip" onclick="navigateForward()" data-tooltip="Forward (Alt+Right)" data-disabled-tooltip="Select a tab first" id="forwardBtn">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor">
+          <polyline points="9 6 15 12 9 18" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+      </button>
+    </div>
+    <div class="right-controls">
+      <button class="window-btn tooltip" onclick="openSettings()" data-tooltip="Settings">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor">
+          <g stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
+            <circle cx="9" cy="6" r="2"></circle>
+            <circle cx="15" cy="12" r="2"></circle>
+            <circle cx="7" cy="18" r="2"></circle>
+          </g>
+        </svg>
+      </button>
+      <button class="window-btn tooltip" onclick="zoomOut()" data-tooltip="Zoom Out">−</button>
+      <div class="zoom-display" id="zoom">100%</div>
+      <button class="window-btn tooltip" onclick="zoomIn()" data-tooltip="Zoom In">+</button>
+      <button class="window-btn tooltip" onclick="toggleFullscreen()" data-tooltip="Fullscreen (F11)">⛶</button>
+      <button class="window-btn" onclick="minimize()">―</button>
+      <button class="window-btn" onclick="maximize()" id="maxBtn">🗖</button>
+      <button class="window-btn close-btn" onclick="closeWindow()">✕</button>
+    </div>
+  </div>
+  <div class="line2">
+    <div class="tabs-container" id="pages"></div>
+  </div>
+</div>
+<script>
+const { ipcRenderer } = require("electron");
+let currentState = {pages: [], currentPage: 1, zoomLevel: 100, isMaximized: false, hasActiveTab: false};
+let dragSourceId = null;
+let editingInputEl = null;
+let preventNavigationOnce = false;
+function closeWindow() { ipcRenderer.send("close-window"); }
+function minimize() { ipcRenderer.send("minimize-window"); }
+function maximize() { ipcRenderer.send("maximize-window"); }
+function toggleFullscreen() { ipcRenderer.send("toggle-fullscreen"); }
+function zoomIn() { ipcRenderer.send("zoom-in"); }
+function zoomOut() { ipcRenderer.send("zoom-out"); }
+function newWindow() { ipcRenderer.send("new-window"); }
+function addPage() { ipcRenderer.send("add-page"); }
+function addTab() { ipcRenderer.send("add-tab"); }
+function deleteTab() { ipcRenderer.send("delete-tab"); }
+function navigateBack() { 
+  if (!currentState.hasActiveTab) return;
+  ipcRenderer.send("navigate-back-header"); 
+}
+function navigateForward() { 
+  if (!currentState.hasActiveTab) return;
+  ipcRenderer.send("navigate-forward-header"); 
+}
+function openSearch() {
+  if (!currentState.hasActiveTab) return;
+  ipcRenderer.send("open-search");
+}
+function openSettings() {
+  ipcRenderer.send("open-settings");
+}
+function switchPage(pageId) { ipcRenderer.send("switch-page", pageId); }
+function requestDeletePage(pageId) { ipcRenderer.send("show-confirm-popup", pageId); }
+function createDragImage(text) {
+  const el = document.createElement("div");
+  el.style.position = "fixed";
+  el.style.left = "-9999px";
+  el.style.top = "-9999px";
+  el.style.background = "#2a2a2a";
+  el.style.border = "1px solid #3a3a3a";
+  el.style.color = "#e6e6e6";
+  el.style.padding = "6px 12px";
+  el.style.borderRadius = "6px";
+  el.style.fontSize = "13px";
+  el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.4)";
+  el.textContent = text;
+  document.body.appendChild(el);
+  return el;
+}
+function renderPages() {
+  const container = document.getElementById("pages");
+  container.style.position = "relative";
+  container.innerHTML = "";
+  let dropIndicator = null;
+  let dragTargetIndex = null;
+  currentState.pages.forEach(page => {
+    const tab = document.createElement("div");
+    tab.className = "page-tab" + (page.id === currentState.currentPage ? " active" : "");
+    tab.setAttribute("draggable", "true");
+    tab.onmousedown = () => {
+      if (editingInputEl) preventNavigationOnce = true;
+    };
+    const name = document.createElement("span");
+    name.textContent = `${page.name} (${page.tabs})`;
+    name.ondblclick = (e) => {
+      e.stopPropagation();
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = page.name;
+      input.style.background = "#2a2a2a";
+      input.style.border = "1px solid #3a3a3a";
+      input.style.color = "#e6e6e6";
+      input.style.padding = "4px 8px";
+      input.style.borderRadius = "6px";
+      input.style.fontSize = "13px";
+      input.style.width = Math.max(80, page.name.length * 8) + "px";
+      tab.replaceChild(input, name);
+      input.focus();
+      input.select();
+      editingInputEl = input;
+      const commit = () => {
+        const newName = (input.value || "").trim();
+        if (newName && newName !== page.name) {
+          ipcRenderer.send("rename-page", page.id, newName);
+        }
+        renderPages();
+        editingInputEl = null;
+      };
+      input.onkeydown = (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); commit(); }
+        else if (ev.key === "Escape") { ev.preventDefault(); renderPages(); }
+      };
+      input.onblur = commit;
+    };
+    tab.appendChild(name);
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "page-close";
+    closeBtn.textContent = "✕";
+    closeBtn.onclick = (e) => { e.stopPropagation(); requestDeletePage(page.id); };
+    tab.appendChild(closeBtn);
+    tab.onclick = (e) => {
+      if (preventNavigationOnce) {
+        preventNavigationOnce = false;
+        e.preventDefault();
+        return;
+      }
+      switchPage(page.id);
+    };
+    tab.ondragstart = (e) => {
+      dragSourceId = page.id;
+      document.body.classList.add("drag-horizontal");
+      try {
+        const img = createDragImage(page.name);
+        e.dataTransfer.setDragImage(img, img.offsetWidth / 2, img.offsetHeight / 2);
+        setTimeout(() => { try { document.body.removeChild(img); } catch (_) {} }, 0);
+      } catch (_) {}
+      try { e.dataTransfer.setData("text/plain", String(page.id)); } catch (_) {}
+      e.dataTransfer.effectAllowed = "move";
+    };
+    tab.ondragend = () => { dragSourceId = null; document.body.classList.remove("drag-horizontal"); if (dropIndicator && dropIndicator.parentNode) dropIndicator.parentNode.removeChild(dropIndicator); dropIndicator = null; dragTargetIndex = null; };
+    tab.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; };
+    tab.ondrop = (e) => {
+      e.preventDefault();
+      const sourceId = dragSourceId || parseInt(e.dataTransfer.getData("text/plain") || "0", 10);
+      if (!sourceId || sourceId === page.id) return;
+      ipcRenderer.send("reorder-pages", sourceId, page.id);
+    };
+    container.appendChild(tab);
+  });
+  const addBtn = document.createElement("button");
+  addBtn.className = "page-tab page-add tooltip tooltip-top";
+  addBtn.setAttribute("data-tooltip", "Add Session (Ctrl+Shift+N)");
+  addBtn.setAttribute("title", "Add Session (Ctrl+Shift+N)");
+  addBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor">
+      <g stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </g>
+    </svg>
+  `;
+  addBtn.onclick = () => addPage();
+  container.appendChild(addBtn);
+  container.ondragover = (e) => {
+    if (!dragSourceId) return;
+    e.preventDefault();
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (y < rect.top || y > rect.bottom) return;
+    const tabs = Array.from(container.children).filter(el => el.classList.contains("page-tab") && !el.classList.contains("page-add"));
+    if (tabs.length === 0) return;
+    let index = tabs.length;
+    for (let i = 0; i < tabs.length; i++) {
+      const r = tabs[i].getBoundingClientRect();
+      const mid = r.left + r.width / 2;
+      if (x <= mid) { index = i; break; }
+    }
+    dragTargetIndex = index;
+    if (!dropIndicator) {
+      dropIndicator = document.createElement("div");
+      dropIndicator.className = "drop-indicator";
+      container.appendChild(dropIndicator);
+    }
+    const leftPos = (index === tabs.length) ? (tabs[tabs.length - 1].getBoundingClientRect().right - rect.left + 2) : (tabs[index].getBoundingClientRect().left - rect.left - 2);
+    dropIndicator.style.left = Math.max(2, Math.min(rect.width - 4, leftPos)) + "px";
+  };
+  container.ondrop = (e) => {
+    e.preventDefault();
+    if (!dragSourceId || dragTargetIndex === null) return;
+    ipcRenderer.send("reorder-pages-index", dragSourceId, dragTargetIndex);
+    dragSourceId = null;
+    dragTargetIndex = null;
+    if (dropIndicator && dropIndicator.parentNode) dropIndicator.parentNode.removeChild(dropIndicator);
+    dropIndicator = null;
+    document.body.classList.remove("drag-horizontal");
+  };
+}
+function updateButtonStates() {
+  const searchBtn = document.getElementById("searchBtn");
+  const backBtn = document.getElementById("backBtn");
+  const forwardBtn = document.getElementById("forwardBtn");
+  
+  if (currentState.hasActiveTab) {
+    searchBtn.style.color = "#fff";
+    searchBtn.disabled = false;
+    backBtn.style.color = "#fff";
+    backBtn.disabled = false;
+    forwardBtn.style.color = "#fff";
+    forwardBtn.disabled = false;
+  } else {
+    searchBtn.style.color = "#666";
+    searchBtn.disabled = true;
+    backBtn.style.color = "#666";
+    backBtn.disabled = true;
+    forwardBtn.style.color = "#666";
+    forwardBtn.disabled = true;
+  }
+}
+ipcRenderer.on("update-state", (event, state) => {
+  currentState = state;
+  document.getElementById("zoom").textContent = state.zoomLevel + "%";
+  document.getElementById("maxBtn").textContent = state.isMaximized ? "🗗" : "🗖";
+  renderPages();
+  updateButtonStates();
+});
+ipcRenderer.on("update-pages", (event, pages) => {
+  currentState.pages = pages;
+  renderPages();
+});
+ipcRenderer.on("update-current-page", (event, pageId) => {
+  currentState.currentPage = pageId;
+  renderPages();
+});
+ipcRenderer.on("update-zoom", (event, level) => {
+  currentState.zoomLevel = level;
+  document.getElementById("zoom").textContent = level + "%";
+});
+ipcRenderer.on("update-maximize", (event, isMax) => {
+  currentState.isMaximized = isMax;
+  document.getElementById("maxBtn").textContent = isMax ? "🗗" : "🗖";
+});
+ipcRenderer.on("update-tab-state", (event, hasTab) => {
+  currentState.hasActiveTab = hasTab;
+  updateButtonStates();
+});
+ipcRenderer.on("trigger-page-switch", (event, pageId) => { switchPage(pageId); });
+ipcRenderer.on("toggle-header", (event, show) => {
+  const header = document.querySelector(".header");
+  if (show) header.classList.remove("hidden");
+  else header.classList.add("hidden");
+});
+updateButtonStates();
+</script>
+</body>
+</html>

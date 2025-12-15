@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Page Not Available</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --card: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e6e6e6;
+    --accent: #1a1a1a;
+    --input-bg: #111;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-family: "Inter", sans-serif;
+    color: var(--text);
+  }
+  .container {
+    width: 560px;
+    max-width: 92%;
+    background: var(--card);
+    padding: 30px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .title {
+    font-size: 24px;
+    font-weight: 600;
+  }
+  .msg {
+    font-size: 15px;
+    line-height: 1.5;
+    color: #ccc;
+  }
+  .url {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+    font-size: 14px;
+  }
+  .buttons {
+    margin-top: 6px;
+    display: flex;
+    gap: 10px;
+  }
+  button {
+    flex: 1;
+    background: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: white;
+    padding: 12px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: filter 0.1s ease;
+  }
+  button:hover { filter: brightness(1.1); }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">This page isn’t available</div>
+    <div class="msg">The link could not be loaded. It may be down, moved, or the address is incorrect.</div>
+    <div id="error-desc" class="msg"></div>
+    <div id="failed-url" class="url"></div>
+    <div class="buttons">
+      <button id="retry">Retry</button>
+      <button id="back">Back to Start</button>
+    </div>
+  </div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const failedUrl = params.get("url") || "";
+  const desc = params.get("desc") || "";
+  const code = params.get("code") || "";
+  const d = document;
+  d.getElementById("failed-url").textContent = failedUrl || "";
+  d.getElementById("error-desc").textContent = (code ? "[" + code + "] " : "") + (desc || "");
+  d.getElementById("retry").onclick = function() {
+    if (failedUrl) {
+      if (window.electronAPI && typeof window.electronAPI.navigateTo === "function") {
+        try { window.electronAPI.navigateTo(failedUrl); return; } catch (_) {}
+      }
+      location.href = failedUrl;
+    } else {
+      location.href = "start.html";
+    }
+  };
+  d.getElementById("back").onclick = function() { location.href = "start.html"; };
+</script>
+</body>
+</html>

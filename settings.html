@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Settings</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: transparent; color: #e6e6e6; user-select: none; overflow: hidden; pointer-events: none;
+  }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; z-index: 999998; pointer-events: auto; }
+  .overlay.show { display: block; }
+  .panel {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 800px; max-width: 90vw; height: 520px; max-height: 90vh;
+    background: #1a1a1a; border: 1px solid #333; border-radius: 8px; display: none; z-index: 999999;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8); pointer-events: auto;
+  }
+  .panel.show { display: grid; grid-template-columns: 220px 1fr; }
+  .sidebar { border-right: 1px solid #2a2a2a; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .sidebar button {
+    background: #2a2a2a; border: 1px solid #3a3a3a; color: #e6e6e6; padding: 10px 12px;
+    border-radius: 6px; cursor: pointer; font-size: 13px; text-align: left;
+  }
+  .sidebar button.active { background: #0a0a0a; }
+  .content { padding: 16px; overflow: auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .row label { width: 240px; color: #bbb; }
+  .row select, .row input[type="text"], .row input[type="number"] {
+    background: #111; border: 1px solid #333; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 13px;
+  }
+  .footer { padding: 12px 16px; border-top: 1px solid #2a2a2a; display: flex; justify-content: flex-end; gap: 8px; }
+  .footer button { background: #2a2a2a; border: 1px solid #3a3a3a; color: #e6e6e6; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .footer button.primary { background: #4b6aaf; border-color: #3e5a94; }
+  .key-input { width: 220px; }
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay"></div>
+<div class="panel" id="panel">
+  <div class="sidebar">
+    <button id="tabGeneral" class="active">General</button>
+    <button id="tabHotkeys">Hotkeys</button>
+  </div>
+  <div class="content">
+    <div id="sectionGeneral" class="section active">
+      <div class="row">
+        <label>Default tabs for new session</label>
+        <select id="defaultTabs"></select>
+      </div>
+      <div class="row">
+        <label>Layout preset</label>
+        <select id="layoutPreset">
+          <option value="auto">Auto Grid</option>
+          <option value="odd_second_tall">Odd: Second Tall</option>
+          <option value="odd_last_wide">Odd: Last Wide</option>
+          <option value="first_wide_top">First Wide Top</option>
+        </select>
+      </div>
+    </div>
+    <div id="sectionHotkeys" class="section">
+      <div class="row"><label>Fullscreen</label><input class="key-input" type="text" id="hk_fullscreen" readonly></div>
+      <div class="row"><label>New Window</label><input class="key-input" type="text" id="hk_new_window" readonly></div>
+      <div class="row"><label>Add Tab</label><input class="key-input" type="text" id="hk_add_tab" readonly></div>
+      <div class="row"><label>Delete Tab</label><input class="key-input" type="text" id="hk_delete_tab" readonly></div>
+      <div class="row"><label>Cycle Tabs</label><input class="key-input" type="text" id="hk_cycle_tabs" readonly></div>
+      <div class="row"><label>Cycle Sessions</label><input class="key-input" type="text" id="hk_cycle_sessions" readonly></div>
+      <div class="row"><label>Navigate Back</label><input class="key-input" type="text" id="hk_back" readonly></div>
+      <div class="row"><label>Navigate Forward</label><input class="key-input" type="text" id="hk_forward" readonly></div>
+      <div class="row"><label>Open Search</label><input class="key-input" type="text" id="hk_search" readonly></div>
+      <div class="row"><label>Add Session</label><input class="key-input" type="text" id="hk_add_session" readonly></div>
+    </div>
+    <div class="footer">
+      <button id="btnReset">Reset</button>
+      <button id="btnCancel">Cancel</button>
+      <button id="btnSave" class="primary">Save</button>
+    </div>
+  </div>
+  </div>
+<script>
+const { ipcRenderer } = require("electron");
+let current = {
+  defaultTabs: 4,
+  layoutPreset: "auto",
+  hotkeys: {
+    fullscreen: "F11",
+    new_window: "CommandOrControl+N",
+    add_tab: "CommandOrControl+T",
+    delete_tab: "CommandOrControl+W",
+    cycle_tabs: "CommandOrControl+Tab",
+    cycle_sessions: "CommandOrControl+Shift+Tab",
+    back: "Alt+Left",
+    forward: "Alt+Right",
+    search: "CommandOrControl+F",
+    add_session: "CommandOrControl+Shift+N"
+  }
+};
+const hotkeyIdMap = {
+  fullscreen: "hk_fullscreen",
+  new_window: "hk_new_window",
+  add_tab: "hk_add_tab",
+  delete_tab: "hk_delete_tab",
+  cycle_tabs: "hk_cycle_tabs",
+  cycle_sessions: "hk_cycle_sessions",
+  back: "hk_back",
+  forward: "hk_forward",
+  search: "hk_search",
+  add_session: "hk_add_session"
+};
+const defaultSettings = JSON.parse(JSON.stringify(current));
+function show() {
+  document.getElementById("overlay").classList.add("show");
+  document.getElementById("panel").classList.add("show");
+  ipcRenderer.send("set-popup-mouse-events", true);
+}
+function hide() {
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("panel").classList.remove("show");
+  ipcRenderer.send("set-popup-mouse-events", false);
+}
+function fillTabsSelect() {
+  const sel = document.getElementById("defaultTabs");
+  sel.innerHTML = "";
+  for (let i = 1; i <= 12; i++) {
+    const opt = document.createElement("option");
+    opt.value = String(i);
+    opt.textContent = String(i);
+    sel.appendChild(opt);
+  }
+}
+function setActive(section) {
+  document.getElementById("tabGeneral").classList.toggle("active", section === "general");
+  document.getElementById("tabHotkeys").classList.toggle("active", section === "hotkeys");
+  document.getElementById("sectionGeneral").classList.toggle("active", section === "general");
+  document.getElementById("sectionHotkeys").classList.toggle("active", section === "hotkeys");
+}
+function renderSettings() {
+  fillTabsSelect();
+  document.getElementById("defaultTabs").value = String(current.defaultTabs);
+  document.getElementById("layoutPreset").value = current.layoutPreset;
+  document.getElementById("hk_fullscreen").value = current.hotkeys.fullscreen;
+  document.getElementById("hk_new_window").value = current.hotkeys.new_window;
+  document.getElementById("hk_add_tab").value = current.hotkeys.add_tab;
+  document.getElementById("hk_delete_tab").value = current.hotkeys.delete_tab;
+  document.getElementById("hk_cycle_tabs").value = current.hotkeys.cycle_tabs;
+  document.getElementById("hk_cycle_sessions").value = current.hotkeys.cycle_sessions;
+  document.getElementById("hk_back").value = current.hotkeys.back;
+  document.getElementById("hk_forward").value = current.hotkeys.forward;
+  document.getElementById("hk_search").value = current.hotkeys.search;
+  document.getElementById("hk_add_session").value = current.hotkeys.add_session;
+}
+function normalizeKeyEvent(e) {
+  const parts = [];
+  if (e.ctrlKey || e.metaKey) parts.push("CommandOrControl");
+  if (e.shiftKey) parts.push("Shift");
+  if (e.altKey) parts.push("Alt");
+  const k = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+  if (!["Shift","Control","Alt","Meta"].includes(k)) parts.push(k);
+  return parts.join("+");
+}
+function resolveConflict(actionKey, combo) {
+  Object.keys(current.hotkeys).forEach(k => {
+    if (k !== actionKey && current.hotkeys[k] === combo) {
+      current.hotkeys[k] = "";
+      const id = hotkeyIdMap[k];
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    }
+  });
+}
+function attachCapture(id, path) {
+  const input = document.getElementById(id);
+  input.addEventListener("focus", () => { input.value = ""; ipcRenderer.send("suspend-hotkeys"); });
+  input.addEventListener("blur", () => { ipcRenderer.send("resume-hotkeys"); });
+  input.addEventListener("keydown", (e) => {
+    e.preventDefault();
+    const combo = normalizeKeyEvent(e);
+    input.value = combo;
+    const segs = path.split(".");
+    if (segs.length === 2) {
+      current[segs[0]][segs[1]] = combo;
+      resolveConflict(segs[1], combo);
+    }
+  });
+}
+document.getElementById("tabGeneral").onclick = () => setActive("general");
+document.getElementById("tabHotkeys").onclick = () => setActive("hotkeys");
+document.getElementById("btnCancel").onclick = () => {
+  hide();
+  ipcRenderer.send("close-settings");
+};
+document.getElementById("btnSave").onclick = () => {
+  current.defaultTabs = parseInt(document.getElementById("defaultTabs").value, 10);
+  current.layoutPreset = document.getElementById("layoutPreset").value;
+  ipcRenderer.send("save-settings", current);
+};
+document.getElementById("btnReset").onclick = () => {
+  const copy = JSON.parse(JSON.stringify(defaultSettings));
+  current = copy;
+  renderSettings();
+};
+["hk_fullscreen","hk_new_window","hk_add_tab","hk_delete_tab","hk_cycle_tabs","hk_cycle_sessions","hk_back","hk_forward","hk_search","hk_add_session"].forEach(id => {
+  const map = {
+    hk_fullscreen: "hotkeys.fullscreen",
+    hk_new_window: "hotkeys.new_window",
+    hk_add_tab: "hotkeys.add_tab",
+    hk_delete_tab: "hotkeys.delete_tab",
+    hk_cycle_tabs: "hotkeys.cycle_tabs",
+    hk_cycle_sessions: "hotkeys.cycle_sessions",
+    hk_back: "hotkeys.back",
+    hk_forward: "hotkeys.forward",
+    hk_search: "hotkeys.search",
+    hk_add_session: "hotkeys.add_session"
+  };
+  attachCapture(id, map[id]);
+});
+ipcRenderer.on("settings-data", (event, data) => {
+  current = data || current;
+  renderSettings();
+  show();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Delete Mode</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: transparent;
+    color: #e6e6e6;
+    user-select: none;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  
+  /* Dark overlay on entire screen */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    pointer-events: auto;
+    z-index: 1000;
+  }
+  
+  .overlay.active {
+    display: block;
+  }
+  
+  /* Popup at top */
+  .delete-popup {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    border: 2px solid #f39c12;
+    border-radius: 8px;
+    padding: 20px 30px;
+    display: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    pointer-events: auto;
+    z-index: 1003;
+    min-width: 400px;
+  }
+  
+  .delete-popup.active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .delete-popup h3 {
+    color: #f39c12;
+    font-size: 18px;
+    margin: 0;
+  }
+  
+  .delete-popup p {
+    color: #999;
+    font-size: 14px;
+    text-align: center;
+    margin: 0;
+  }
+  
+  .delete-popup button {
+    background: #555;
+    border: 1px solid #666;
+    color: white;
+    padding: 10px 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    pointer-events: auto;
+    transition: all 0.2s;
+  }
+  
+  .delete-popup button:hover {
+    background: #666;
+  }
+  
+  /* Tab delete indicators */
+  .tab-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    pointer-events: auto;
+    z-index: 1002;
+  }
+  
+  .tab-grid.active {
+    display: block;
+  }
+  
+  .tab-delete-zone {
+    position: relative;
+    border: 3px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  
+  .tab-delete-zone:hover {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+  }
+  
+  .tab-delete-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    background: rgba(231, 76, 60, 0.9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    color: white;
+    font-weight: bold;
+    pointer-events: none;
+    transition: all 0.2s;
+  }
+  
+  .tab-delete-zone:hover .tab-delete-icon {
+    transform: translate(-50%, -50%) scale(1.1);
+    background: rgba(231, 76, 60, 1);
+  }
+</style>
+</head>
+<body>
+
+<!-- Dark overlay -->
+<div class="overlay" id="overlay" onclick="cancelDeleteMode()"></div>
+
+<!-- Delete popup -->
+<div class="delete-popup" id="deletePopup">
+  <h3>🗑️ Delete Tab Mode</h3>
+  <p>Click on any tab to delete it<br>Press ESC or Cancel to exit</p>
+  <button onclick="cancelDeleteMode()">Cancel</button>
+</div>
+
+<!-- Tab grid with delete zones -->
+<div class="tab-grid" id="tabGrid">
+  <!-- Tab delete zones will be dynamically created here -->
+</div>
+
+<script>
+const { ipcRenderer } = require("electron");
+
+let isActive = false;
+let tabBounds = [];
+
+function cancelDeleteMode() {
+  ipcRenderer.send("cancel-delete-mode");
+}
+
+function deleteTab(tabIndex) {
+  ipcRenderer.send("delete-specific-tab", tabIndex);
+}
+
+function renderTabGrid() {
+  const tabGrid = document.getElementById("tabGrid");
+  tabGrid.innerHTML = "";
+  tabGrid.style.position = "fixed";
+  tabGrid.style.top = "0";
+  tabGrid.style.left = "0";
+  tabGrid.style.right = "0";
+  tabGrid.style.bottom = "0";
+  
+  tabBounds.forEach((bounds, i) => {
+    const zone = document.createElement("div");
+    zone.className = "tab-delete-zone";
+    zone.style.position = "absolute";
+    zone.style.left = bounds.x + "px";
+    zone.style.top = bounds.y + "px";
+    zone.style.width = bounds.width + "px";
+    zone.style.height = bounds.height + "px";
+    
+    const icon = document.createElement("div");
+    icon.className = "tab-delete-icon";
+    icon.textContent = "✕";
+    
+    zone.appendChild(icon);
+    zone.onclick = () => deleteTab(i);
+    
+    tabGrid.appendChild(zone);
+  });
+}
+
+// Listen for delete mode activation with actual tab bounds
+ipcRenderer.on("activate-delete-mode", (event, bounds) => {
+  tabBounds = bounds;
+  isActive = true;
+  
+  document.getElementById("overlay").classList.add("active");
+  document.getElementById("deletePopup").classList.add("active");
+  document.getElementById("tabGrid").classList.add("active");
+  
+  renderTabGrid();
+});
+
+// Listen for delete mode deactivation
+ipcRenderer.on("deactivate-delete-mode", () => {
+  isActive = false;
+  
+  document.getElementById("overlay").classList.remove("active");
+  document.getElementById("deletePopup").classList.remove("active");
+  document.getElementById("tabGrid").classList.remove("active");
+});
+
+// Handle ESC key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && isActive) {
+    cancelDeleteMode();
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+  "name": "multi-split-tabs",
+  "version": "1.0.0",
+  "description": "Multi Split Tabs - Electron App",
+  "main": "main.js",
+
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --publish never"
+  },
+
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^24.13.3"
+  },
+
+  "build": {
+    "appId": "com.multisplittabs.app",
+    "productName": "Multi Split Tabs",
+
+    "directories": {
+      "output": "dist"
+    },
+
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!node_modules/.cache/*"
+    ],
+
+    "win": {
+      "target": "nsis",
+      "icon": "images/logo.ico"
+    },
+
+    "mac": {
+      "target": "dmg",
+      "icon": "images/logo.icns",
+      "category": "public.app-category.productivity"
+    },
+
+    "linux": {
+      "target": "AppImage",
+      "icon": "images/logo.png",
+      "category": "Utility"
+    },
+
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

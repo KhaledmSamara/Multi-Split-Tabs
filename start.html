@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Start</title>
+
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --card: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e6e6e6;
+    --accent: #1a1a1a;
+    --input-bg: #111;
+    --google-bg: #000000;
+    --ddg-bg: #000000;
+    --bing-bg: #000000;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-family: "Inter", sans-serif;
+    color: var(--text);
+  }
+
+  .container {
+    width: 500px;
+    max-width: 90%;
+    background: var(--card);
+    padding: 30px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    backdrop-filter: blur(8px);
+  }
+
+  h1 {
+    margin: 0 0 20px 0;
+    font-size: 26px;
+    font-weight: 600;
+  }
+
+  #url {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text);
+    outline: none;
+  }
+  #url:focus {
+    border-color: var(--accent);
+  }
+
+  .buttons {
+    margin-top: 24px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  button {
+    flex: 1;
+    margin: 0 6px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    padding: 12px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.1s;
+  }
+  button:hover {
+    filter: brightness(1.1);
+  }
+  .btn-google {
+    background: var(--google-bg);
+  }
+  .btn-ddg {
+    background: var(--ddg-bg);
+  }
+  .btn-bing {
+    background: var(--bing-bg);
+  }
+
+  /* --- Loading overlay --- */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 999;
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 6px solid #333;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading">
+  <div class="spinner"></div>
+  Loading...
+</div>
+
+<div class="container">
+  <h1>Start Browsing</h1>
+
+  <input id="url" placeholder="Type a URL or search…" autofocus>
+
+  <div class="buttons">
+    <button class="btn-google" onclick="go('google')">Google</button>
+    <button class="btn-ddg" onclick="go('ddg')">DuckDuckGo</button>
+    <button class="btn-bing" onclick="go('bing')">Bing</button>
+  </div>
+</div>
+
+<script>
+  function showLoading() {
+    document.getElementById("loading").style.display = "flex";
+  }
+  window.addEventListener("load", () => {
+    document.getElementById("loading").style.display = "none";
+  });
+
+  function normalize(input) {
+    if (input.startsWith("http://") || input.startsWith("https://"))
+      return input;
+
+    if (input.includes(".") && !input.includes(" "))
+      return "https://" + input;
+
+    return null;
+  }
+
+  function go(engine) {
+    const input = document.getElementById("url").value.trim();
+    const url = normalize(input);
+
+    showLoading(); // Show loading overlay immediately
+
+    if (url) {
+      location.href = url;
+      return;
+    }
+
+    const q = encodeURIComponent(input);
+
+    if (engine === "google") location.href = "https://www.google.com/search?q=" + q;
+    if (engine === "ddg")    location.href = "https://duckduckgo.com/?q=" + q;
+    if (engine === "bing")   location.href = "https://www.bing.com/search?q=" + q;
+  }
+
+  document.getElementById("url")
+    .addEventListener("keydown", e => {
+      if (e.key === "Enter") go("google");
+    });
+</script>
+
+</body>
+</html>

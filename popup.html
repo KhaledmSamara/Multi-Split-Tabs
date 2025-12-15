@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Popup</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: transparent;
+    color: #e6e6e6;
+    user-select: none;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  
+  .error-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border: 2px solid #e74c3c;
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 300px;
+    display: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    pointer-events: auto;
+    z-index: 999999;
+  }
+  .error-popup.show {
+    display: block;
+  }
+  .error-popup h3 {
+    color: #e74c3c;
+    margin-bottom: 10px;
+  }
+  .error-popup button {
+    margin-top: 15px;
+    width: 100%;
+    background: #e74c3c;
+    border: 1px solid #c0392b;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    pointer-events: auto;
+  }
+  .error-popup button:hover {
+    background: #c0392b;
+  }
+  
+  .confirm-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border: 2px solid #f39c12;
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 350px;
+    display: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    pointer-events: auto;
+    z-index: 999999;
+  }
+  .confirm-popup.show {
+    display: block;
+  }
+  .confirm-popup h3 {
+    color: #f39c12;
+    margin-bottom: 10px;
+  }
+  .confirm-popup p {
+    margin-bottom: 15px;
+    color: #999;
+  }
+  .confirm-popup .buttons {
+    display: flex;
+    gap: 10px;
+  }
+  .confirm-popup button {
+    flex: 1;
+    background: #555;
+    border: 1px solid #666;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    pointer-events: auto;
+  }
+  .confirm-popup button:hover {
+    background: #666;
+  }
+  .confirm-popup .delete {
+    background: #e74c3c;
+    border-color: #c0392b;
+  }
+  .confirm-popup .delete:hover {
+    background: #c0392b;
+  }
+  
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    z-index: 999998;
+    pointer-events: auto;
+  }
+  .overlay.show {
+    display: block;
+  }
+  #initialLoader {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 1000000;
+    color: #e6e6e6;
+    font-size: 18px;
+    pointer-events: none;
+  }
+  #initialLoader.show {
+    display: flex;
+  }
+  #initialLoader .spinner {
+    width: 48px;
+    height: 48px;
+    border: 6px solid #222;
+    border-top-color: #555;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+<!-- Overlay -->
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+<div id="initialLoader">
+  <div class="spinner"></div>
+  Loading...
+  </div>
+
+<!-- Error Popup -->
+<div class="error-popup" id="errorPopup">
+  <h3>⚠️ Error</h3>
+  <p id="errorMsg"></p>
+  <button onclick="closeError()">OK</button>
+</div>
+
+<!-- Confirm Popup -->
+<div class="confirm-popup" id="confirmPopup">
+  <h3>⚠️ Confirm Delete</h3>
+  <p>Are you sure you want to delete this session?<br><strong>This action cannot be undone.</strong></p>
+  <div class="buttons">
+    <button class="cancel" onclick="closeConfirm()">Cancel</button>
+    <button class="delete" onclick="confirmDelete()">Delete Session</button>
+  </div>
+</div>
+
+<!-- Confirm Close App Popup -->
+<div class="confirm-popup" id="confirmClosePopup">
+  <h3>⚠️ Confirm Delete & Exit</h3>
+  <p>Are you sure you want to delete this session and close the app?<br><strong>This action cannot be undone.</strong></p>
+  <div class="buttons">
+    <button class="cancel" onclick="closeConfirmClose()">Cancel</button>
+    <button class="delete" onclick="confirmCloseApp()">Delete Session & Exit</button>
+  </div>
+  </div>
+
+<script>
+const { ipcRenderer } = require("electron");
+
+let pageToDelete = null;
+
+function closeError() {
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("errorPopup").classList.remove("show");
+  enableMouseEvents(false);
+}
+
+function closeConfirm() {
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("confirmPopup").classList.remove("show");
+  pageToDelete = null;
+  enableMouseEvents(false);
+}
+
+function confirmDelete() {
+  if (pageToDelete) {
+    ipcRenderer.send("delete-page-from-popup", pageToDelete);
+    pageToDelete = null;
+  }
+  closeConfirm();
+}
+
+function closeConfirmClose() {
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("confirmClosePopup").classList.remove("show");
+  enableMouseEvents(false);
+}
+
+function confirmCloseApp() {
+  ipcRenderer.send("confirm-close-app", pageToDelete);
+  closeConfirmClose();
+}
+
+function showError(msg) {
+  document.getElementById("errorMsg").textContent = msg;
+  document.getElementById("overlay").classList.add("show");
+  document.getElementById("errorPopup").classList.add("show");
+  enableMouseEvents(true);
+}
+
+function showConfirm(pageId) {
+  pageToDelete = pageId;
+  document.getElementById("overlay").classList.add("show");
+  document.getElementById("confirmPopup").classList.add("show");
+  enableMouseEvents(true);
+}
+
+function showConfirmClose(pageId) {
+  pageToDelete = pageId;
+  document.getElementById("overlay").classList.add("show");
+  document.getElementById("confirmClosePopup").classList.add("show");
+  enableMouseEvents(true);
+}
+
+function enableMouseEvents(enable) {
+  const { ipcRenderer } = require("electron");
+  ipcRenderer.send("set-popup-mouse-events", enable);
+}
+function closeAll() {
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("errorPopup").classList.remove("show");
+  document.getElementById("confirmPopup").classList.remove("show");
+  document.getElementById("confirmClosePopup").classList.remove("show");
+  pageToDelete = null;
+  enableMouseEvents(false);
+}
+
+function showInitialLoader() {
+  document.getElementById("initialLoader").classList.add("show");
+}
+function hideInitialLoader() {
+  document.getElementById("initialLoader").classList.remove("show");
+}
+
+// IPC listeners
+ipcRenderer.on("show-error", (event, msg) => {
+  showError(msg);
+});
+
+ipcRenderer.on("show-confirm", (event, pageId) => {
+  showConfirm(pageId);
+});
+ipcRenderer.on("show-confirm-close", (event, pageId) => {
+  showConfirmClose(pageId);
+});
+ipcRenderer.on("show-initial-loader", () => {
+  showInitialLoader();
+});
+ipcRenderer.on("hide-initial-loader", () => {
+  hideInitialLoader();
+});
+</script>
+</body>
+</html>
