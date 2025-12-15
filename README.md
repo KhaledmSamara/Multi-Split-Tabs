@@ -5,7 +5,9 @@ A desktop browser with multiple tabs and multiple sessions. Each session can ope
 ## Screenshots
 
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/5d3bd963-06f5-4635-a51a-7559e638ec5d" />
+
 <img width="1918" height="1080" alt="image" src="https://github.com/user-attachments/assets/51185021-f902-4aff-9f74-c33db38c5af8" />
+
 <img width="1921" height="1080" alt="image" src="https://github.com/user-attachments/assets/1a87ca5c-ac25-42b3-8dfc-5b212e49182e" />
 
 
