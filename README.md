@@ -23,6 +23,7 @@ A desktop browser with multiple tabs and multiple sessions. Each session can ope
 ## Download & Install
 
 **Windows:** Download the setup file and run it
+https://github.com/KhaledmSamara/Multi-Split-Tabs/releases/download/release-1/Windows_Multi.Split.Tabs.Setup.exe
 
 ## **Default Shortcuts** (can be changed in settings):
 
